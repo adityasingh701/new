@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Broadcaster</title>
+</head>
+<body>
+  <h2>Broadcaster - Share Your Webcam</h2>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script>
+    
+const firebaseConfig = {
+  apiKey: "AIzaSyCbWQMCtFy3Jwjk8dsmBfByJCYxhDAjfHQ",
+  authDomain: "click-promo-tracker.firebaseapp.com",
+  projectId: "click-promo-tracker",
+  storageBucket: "click-promo-tracker.firebasestorage.app",
+  messagingSenderId: "1881147982",
+  appId: "1:1881147982:web:d94587862b40d0d3c5511f"
+};
+
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    const peerConnection = new RTCPeerConnection(servers);
+    const localVideo = document.getElementById("localVideo");
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        localVideo.srcObject = stream;
+        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+        return peerConnection.createOffer();
+      })
+      .then(offer => {
+        return peerConnection.setLocalDescription(offer);
+      })
+      .then(() => {
+        const offer = {
+          sdp: peerConnection.localDescription.sdp,
+          type: peerConnection.localDescription.type
+        };
+        db.ref("offer").set(offer);
+      });
+
+    db.ref("answer").on("value", snapshot => {
+      const data = snapshot.val();
+      if (!peerConnection.currentRemoteDescription && data) {
+        const answerDesc = new RTCSessionDescription(data);
+        peerConnection.setRemoteDescription(answerDesc);
+      }
+    });
+  </script>
+</body>
+</html>
